@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DroppedNeedle for YouTube",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Identify a song on YouTube and request it through DroppedNeedle.",
   "permissions": ["activeTab", "storage", "cookies"],
   "host_permissions": [
@@ -16,7 +16,8 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/watch*", "https://youtube.com/watch*"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "css": ["youtube.css"]
     }
   ],
   "options_page": "options.html"
