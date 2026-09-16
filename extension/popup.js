@@ -40,7 +40,7 @@ async function loadVideo() {
     const response = await chrome.tabs.sendMessage(tab.id, { type: "DROPPEDNEEDLE_GET_VIDEO" });
     currentVideo = response?.video;
   } catch {
-    statusEl.textContent = "Reload this YouTube tab after installing the extension.";
+    statusEl.textContent = "Reload this YouTube tab after updating the extension.";
     return;
   }
   if (!currentVideo) {
@@ -54,8 +54,11 @@ async function loadVideo() {
   identifyButton.disabled = false;
 }
 
-identifyButton.addEventListener("click", async () => {
+identifyButton.addEventListener("click", identify);
+
+async function identify() {
   identifyButton.disabled = true;
+  identifyButton.textContent = "Finding…";
   statusEl.textContent = "Finding song…";
   resultsEl.replaceChildren();
   try {
@@ -63,23 +66,39 @@ identifyButton.addEventListener("click", async () => {
       method: "POST",
       body: JSON.stringify(currentVideo)
     });
+    if (data.warning && !(data.matches || []).length) {
+      statusEl.textContent = data.warning;
+      return;
+    }
     renderResults(data.matches || []);
   } catch (error) {
     statusEl.textContent = error.message || "Couldn't contact DroppedNeedle.";
   } finally {
     identifyButton.disabled = false;
+    identifyButton.textContent = "Find song";
   }
-});
+}
 
 function renderResults(matches) {
   if (!matches.length) {
     statusEl.textContent = "No matches found.";
     return;
   }
-  statusEl.textContent = matches.length === 1 ? "Possible match" : "Choose a match";
-  for (const match of matches) {
+
+  statusEl.textContent = matches.length === 1
+    ? "Found a likely match."
+    : "Best match first — choose another if needed.";
+
+  for (const [index, match] of matches.entries()) {
     const item = document.createElement("div");
-    item.className = "result";
+    item.className = `result${match.recommended || index === 0 ? " recommended" : ""}`;
+
+    if (match.recommended || index === 0) {
+      const badge = document.createElement("div");
+      badge.className = "recommended-badge";
+      badge.textContent = "Best match";
+      item.append(badge);
+    }
 
     const title = document.createElement("div");
     title.className = "result-title";
@@ -87,13 +106,13 @@ function renderResults(matches) {
 
     const meta = document.createElement("div");
     meta.className = "result-meta";
-    meta.textContent = [match.album, match.year, match.score != null ? `${Math.round(match.score * 100)}%` : null]
+    meta.textContent = [match.album, match.year, match.score != null ? `${Math.round(match.score * 100)}% MB match` : null]
       .filter(Boolean).join(" · ");
 
     const add = document.createElement("button");
     add.type = "button";
     add.className = "add-track";
-    add.textContent = "Add Track";
+    add.textContent = "Add to DroppedNeedle";
     add.addEventListener("click", () => requestTrack(match, add));
 
     item.append(title, meta, add);
@@ -102,9 +121,11 @@ function renderResults(matches) {
 }
 
 async function requestTrack(match, button) {
-  button.disabled = true;
-  button.textContent = "Adding…";
+  const buttons = [...resultsEl.querySelectorAll(".add-track")];
+  buttons.forEach((candidate) => { candidate.disabled = true; });
+  button.textContent = "Sending…";
   statusEl.textContent = "Sending track to DroppedNeedle…";
+
   try {
     const result = await dnFetch(`/api/v1/tracks/${encodeURIComponent(match.recording_mbid)}/request`, {
       method: "POST",
@@ -118,15 +139,28 @@ async function requestTrack(match, button) {
         release_id: match.release_id || null
       })
     });
-    button.textContent = result.status === "already_in_library" ? "Already in library" : "Added ✓";
-    statusEl.textContent = result.status === "awaiting_approval"
-      ? "Request submitted and awaiting approval."
-      : result.status === "already_in_library"
-        ? "That track is already in your library."
-        : "Track added to DroppedNeedle.";
+
+    switch (result.status) {
+      case "already_in_library":
+        button.textContent = "Already in library ✓";
+        statusEl.textContent = "This track is already in your DroppedNeedle library.";
+        break;
+      case "awaiting_approval":
+        button.textContent = "Awaiting approval ✓";
+        statusEl.textContent = "Request submitted and awaiting approval in DroppedNeedle.";
+        break;
+      case "queued":
+        button.textContent = "Queued ✓";
+        statusEl.textContent = "Track queued for acquisition in DroppedNeedle.";
+        break;
+      default:
+        button.textContent = "Requested ✓";
+        statusEl.textContent = "Track request sent to DroppedNeedle.";
+        break;
+    }
   } catch (error) {
-    button.disabled = false;
-    button.textContent = "Add Track";
+    buttons.forEach((candidate) => { candidate.disabled = false; });
+    button.textContent = "Add to DroppedNeedle";
     statusEl.textContent = error.message || "Couldn't request track.";
   }
 }
