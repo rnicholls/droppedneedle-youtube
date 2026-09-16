@@ -9,9 +9,11 @@ header span, #video-channel { color: #a1a1aa; }
 #video-channel { margin-top: 3px; font-size: 12px; }
 #status { color: #a1a1aa; margin: 12px 0; }
 button { width: 100%; border: 0; border-radius: 8px; padding: 10px 12px; font-weight: 700; cursor: pointer; }
-button:disabled { cursor: default; opacity: .55; }
+button:disabled { cursor: default; opacity: .65; }
 #settings { display: block; margin-top: 12px; text-align: center; color: #a1a1aa; font-size: 12px; }
-.result { padding: 12px 0; border-top: 1px solid #27272a; }
+.result { position: relative; padding: 12px 0; border-top: 1px solid #27272a; }
+.result.recommended { margin: 8px -8px 0; padding: 12px 8px; border: 1px solid #3f3f46; border-radius: 10px; background: #111318; }
+.recommended-badge { display: inline-block; margin-bottom: 7px; padding: 2px 7px; border: 1px solid #52525b; border-radius: 999px; color: #d4d4d8; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .result-title { font-weight: 700; }
 .result-meta { color: #a1a1aa; font-size: 12px; margin: 3px 0 9px; }
 .add-track { padding: 8px 10px; }
