@@ -53,9 +53,12 @@ function renderMatch(panel, match, index) {
   const item = document.createElement("div"); item.className = `dn-result${match.recommended ? " dn-recommended" : ""}`;
   const heading = document.createElement("div"); heading.className = "dn-result-heading";
   const title = document.createElement("strong"); title.textContent = `${match.artist || "Unknown artist"} — ${match.title}`; heading.append(title);
-  if (match.recommended) { const badge = document.createElement("span"); badge.className = "dn-badge"; badge.textContent = "Best match"; heading.append(badge); }
+  if (match.in_library) { const badge = document.createElement("span"); badge.className = "dn-badge dn-library-badge"; badge.textContent = "In DroppedNeedle"; heading.append(badge); }
+  else if (match.recommended) { const badge = document.createElement("span"); badge.className = "dn-badge"; badge.textContent = "Best match"; heading.append(badge); }
   const meta = document.createElement("div"); meta.className = "dn-meta"; meta.textContent = [match.album, match.year, match.score != null ? `${Math.round(match.score * 100)}%` : null].filter(Boolean).join(" · ");
-  const button = document.createElement("button"); button.className = "dn-request"; button.textContent = index === 0 ? "Add track" : "Add this version"; button.addEventListener("click", () => requestTrack(panel, match, button));
+  const button = document.createElement("button"); button.className = "dn-request";
+  if (match.in_library) { button.textContent = "Already in DroppedNeedle ✓"; button.disabled = true; }
+  else { button.textContent = index === 0 ? "Add track" : "Add this version"; button.addEventListener("click", () => requestTrack(panel, match, button)); }
   item.append(heading, meta, button); return item;
 }
 
@@ -63,7 +66,7 @@ async function requestTrack(panel, match, button) {
   const status = panel.querySelector(".dn-status"); button.disabled = true; button.textContent = "Adding…"; status.textContent = "Sending to DroppedNeedle…";
   try {
     const result = await dnFetch(`/api/v1/tracks/${encodeURIComponent(match.recording_mbid)}/request`, { method: "POST", body: JSON.stringify({ artist_name: match.artist, track_title: match.title, album_title: match.album || null, duration_seconds: match.duration_seconds || null, release_group_mbid: match.release_group_mbid || null, artist_mbid: match.artist_mbid || null, release_id: match.release_id || null }) });
-    if (result.status === "already_in_library") { button.textContent = "Already in library ✓"; status.textContent = "This track is already in your library."; }
+    if (result.status === "already_in_library") { button.textContent = "Already in DroppedNeedle ✓"; status.textContent = "This track is already in your library."; }
     else if (result.status === "awaiting_approval") { button.textContent = "Requested ✓"; status.textContent = "Request submitted and awaiting approval."; }
     else { button.textContent = "Queued ✓"; status.textContent = "DroppedNeedle is finding and downloading the track."; }
     const pageButton = document.querySelector(`#${DN_ID} .dn-add-button`); if (pageButton) pageButton.textContent = "DroppedNeedle ✓";
