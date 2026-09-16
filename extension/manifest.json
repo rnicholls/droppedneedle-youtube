@@ -1,10 +1,14 @@
 {
   "manifest_version": 3,
   "name": "DroppedNeedle for YouTube",
-  "version": "0.1.0",
-  "description": "Request the song in the current YouTube video through DroppedNeedle.",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": ["https://www.youtube.com/*", "https://youtube.com/*"],
+  "version": "0.2.0",
+  "description": "Identify a song on YouTube and request it through DroppedNeedle.",
+  "permissions": ["activeTab", "storage", "cookies"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://droppedneedle.nodehaven.ca/*"
+  ],
   "action": {
     "default_title": "Add to DroppedNeedle",
     "default_popup": "popup.html"
