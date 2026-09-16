@@ -13,10 +13,21 @@ document.querySelector("#settings").addEventListener("click", (event) => {
 });
 
 async function settings() {
-  return chrome.storage.sync.get({
-    baseUrl: "https://droppedneedle.nodehaven.ca",
-    token: ""
+  return chrome.storage.sync.get({ baseUrl: "https://droppedneedle.nodehaven.ca" });
+}
+
+async function dnFetch(path, options = {}) {
+  const { baseUrl } = await settings();
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
+    ...options,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
   });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`DroppedNeedle returned ${response.status}${body ? `: ${body.slice(0, 120)}` : ""}`);
+  }
+  return response.json();
 }
 
 async function loadVideo() {
@@ -25,7 +36,6 @@ async function loadVideo() {
     statusEl.textContent = "Open a YouTube video first.";
     return;
   }
-
   try {
     const response = await chrome.tabs.sendMessage(tab.id, { type: "DROPPEDNEEDLE_GET_VIDEO" });
     currentVideo = response?.video;
@@ -33,12 +43,10 @@ async function loadVideo() {
     statusEl.textContent = "Reload this YouTube tab after installing the extension.";
     return;
   }
-
   if (!currentVideo) {
     statusEl.textContent = "Couldn't read this video.";
     return;
   }
-
   titleEl.textContent = currentVideo.title;
   channelEl.textContent = currentVideo.channel;
   videoEl.hidden = false;
@@ -47,29 +55,14 @@ async function loadVideo() {
 }
 
 identifyButton.addEventListener("click", async () => {
-  const { baseUrl, token } = await settings();
-  if (!baseUrl) {
-    statusEl.textContent = "Set your DroppedNeedle URL in Settings.";
-    return;
-  }
-
   identifyButton.disabled = true;
   statusEl.textContent = "Finding song…";
   resultsEl.replaceChildren();
-
   try {
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/plugins/ext/youtube-link/identify`, {
+    const data = await dnFetch("/api/v1/plugins/ext/youtube-link/identify", {
       method: "POST",
-      headers,
-      credentials: "include",
       body: JSON.stringify(currentVideo)
     });
-
-    if (!response.ok) throw new Error(`DroppedNeedle returned ${response.status}`);
-    const data = await response.json();
     renderResults(data.matches || []);
   } catch (error) {
     statusEl.textContent = error.message || "Couldn't contact DroppedNeedle.";
@@ -80,24 +73,61 @@ identifyButton.addEventListener("click", async () => {
 
 function renderResults(matches) {
   if (!matches.length) {
-    statusEl.textContent = "No confident matches found.";
+    statusEl.textContent = "No matches found.";
     return;
   }
-
-  statusEl.textContent = matches.length === 1 ? "Possible match" : "Possible matches";
+  statusEl.textContent = matches.length === 1 ? "Possible match" : "Choose a match";
   for (const match of matches) {
     const item = document.createElement("div");
     item.className = "result";
+
     const title = document.createElement("div");
     title.className = "result-title";
     title.textContent = `${match.artist || "Unknown artist"} — ${match.title}`;
+
     const meta = document.createElement("div");
     meta.className = "result-meta";
     meta.textContent = [match.album, match.year, match.score != null ? `${Math.round(match.score * 100)}%` : null]
-      .filter(Boolean)
-      .join(" · ");
-    item.append(title, meta);
+      .filter(Boolean).join(" · ");
+
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "add-track";
+    add.textContent = "Add Track";
+    add.addEventListener("click", () => requestTrack(match, add));
+
+    item.append(title, meta, add);
     resultsEl.append(item);
+  }
+}
+
+async function requestTrack(match, button) {
+  button.disabled = true;
+  button.textContent = "Adding…";
+  statusEl.textContent = "Sending track to DroppedNeedle…";
+  try {
+    const result = await dnFetch(`/api/v1/tracks/${encodeURIComponent(match.recording_mbid)}/request`, {
+      method: "POST",
+      body: JSON.stringify({
+        artist_name: match.artist,
+        track_title: match.title,
+        album_title: match.album || null,
+        duration_seconds: match.duration_seconds || null,
+        release_group_mbid: match.release_group_mbid || null,
+        artist_mbid: match.artist_mbid || null,
+        release_id: match.release_id || null
+      })
+    });
+    button.textContent = result.status === "already_in_library" ? "Already in library" : "Added ✓";
+    statusEl.textContent = result.status === "awaiting_approval"
+      ? "Request submitted and awaiting approval."
+      : result.status === "already_in_library"
+        ? "That track is already in your library."
+        : "Track added to DroppedNeedle.";
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Add Track";
+    statusEl.textContent = error.message || "Couldn't request track.";
   }
 }
 
