@@ -12,6 +12,10 @@ _NOISE = re.compile(
     r"\s*[\[(](?:official(?:\s+music)?\s+video|official\s+audio|audio|lyrics?|lyric\s+video|visuali[sz]er|hd|4k)[^\])]*[\])]\s*",
     re.IGNORECASE,
 )
+_TRAILING_NOISE = re.compile(
+    r"(?:\s*[-–—|:]?\s*)(?:official(?:\s+music)?\s+video|official\s+audio|audio|lyrics?|lyric\s+video|visuali[sz]er|hd|4k)\s*$",
+    re.IGNORECASE,
+)
 _COMPILATION_HINTS = (
     "various artists", "mastermix", "now that's what i call", "now dance",
     "greatest hits", "best of", "chart hits", "club hits", "dance hits",
@@ -64,11 +68,13 @@ class YouTubeLinkPlugin:
 
     @staticmethod
     def _parse_youtube_title(title: str, channel: str) -> tuple[str, str]:
-        cleaned = _NOISE.sub(" ", title).strip(" -–—|\t")
+        cleaned = _NOISE.sub(" ", title)
+        cleaned = _TRAILING_NOISE.sub("", cleaned).strip(" -–—|\t")
         cleaned = re.sub(r"\s+", " ", cleaned)
         for separator in (" - ", " – ", " — ", " | "):
             if separator in cleaned:
                 artist, track = cleaned.split(separator, 1)
+                track = _TRAILING_NOISE.sub("", track).strip(" -–—|\t")
                 return artist.strip(), track.strip()
         artist = re.sub(r"(?:VEVO|Official|Music)$", "", channel, flags=re.IGNORECASE).strip()
         return artist, cleaned
