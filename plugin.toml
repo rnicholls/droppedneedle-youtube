@@ -1,0 +1,19 @@
+[plugin]
+name = "youtube-link"
+display_name = "YouTube Link"
+version = "0.1.0"
+api_version = 1
+entrypoint = "plugin:YouTubeLinkPlugin"
+capabilities = ["publisher"]
+description = "Identify music from YouTube page metadata and hand exact recordings to DroppedNeedle."
+author = "rnicholls"
+homepage = "https://github.com/rnicholls/droppedneedle-youtube"
+
+[[capability]]
+id = "publisher"
+
+[[route]]
+path = "identify"
+method = "POST"
+auth = "user"
+rate_limit_per_minute = 30
