@@ -75,8 +75,10 @@ class YouTubeLinkPlugin:
 
     async def _droppedneedle_recording_search(self, artist: str, title: str) -> list[dict[str, Any]]:
         from core.dependencies.repo_providers import get_musicbrainz_repository
+        from core.dependencies.service_providers import get_library_manager
 
         repo = get_musicbrainz_repository()
+        library = get_library_manager()
         recordings = await repo.search_recordings(artist, title, limit=8)
         matches: list[dict[str, Any]] = []
 
@@ -85,8 +87,14 @@ class YouTubeLinkPlugin:
             release = self._best_release(release_groups, title)
             mb_score = self._score(recording.score)
             rank_score = self._rank_score(recording, release, artist, title, mb_score)
+            recording_mbid = recording.recording_mbid
+            try:
+                in_library = bool(recording_mbid and await library.has_track(recording_mbid))
+            except Exception as exc:
+                self.ctx.logger.warning("Library lookup failed for %s: %s", recording_mbid, exc)
+                in_library = False
             matches.append({
-                "recording_mbid": recording.recording_mbid,
+                "recording_mbid": recording_mbid,
                 "artist": recording.artist or artist,
                 "artist_mbid": None,
                 "title": recording.title or title,
@@ -98,6 +106,7 @@ class YouTubeLinkPlugin:
                 "score": mb_score,
                 "rank_score": round(rank_score, 4),
                 "recommended": False,
+                "in_library": in_library,
             })
 
         matches.sort(key=lambda item: item["rank_score"], reverse=True)
