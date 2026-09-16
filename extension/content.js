@@ -10,15 +10,10 @@ function getVideoMetadata() {
   return { url: window.location.href, videoId: url.searchParams.get("v"), title, channel };
 }
 
-async function settings() { return chrome.storage.sync.get({ baseUrl: "https://droppedneedle.nodehaven.ca" }); }
 async function dnFetch(path, options = {}) {
-  const { baseUrl } = await settings();
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, { ...options, credentials: "include", headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`DroppedNeedle returned ${response.status}${body ? `: ${body.slice(0, 100)}` : ""}`);
-  }
-  return response.json();
+  const response = await chrome.runtime.sendMessage({ type: "DROPPEDNEEDLE_API", path, options });
+  if (!response?.ok) throw new Error(response?.error || "Couldn't contact DroppedNeedle.");
+  return response.body;
 }
 
 function closePanel() {
@@ -30,30 +25,21 @@ function positionPanel(panel, button) {
   const rect = button.getBoundingClientRect();
   const width = Math.min(390, window.innerWidth - 24);
   const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-  panel.style.width = `${width}px`;
-  panel.style.left = `${left}px`;
-  panel.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - 80)}px`;
+  panel.style.width = `${width}px`; panel.style.left = `${left}px`; panel.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - 80)}px`;
 }
 
 function showPanel(video) {
   closePanel();
-  const button = document.querySelector(`#${DN_ID} .dn-add-button`);
-  if (!button) return;
+  const button = document.querySelector(`#${DN_ID} .dn-add-button`); if (!button) return;
   button.classList.add("dn-open");
-  const panel = document.createElement("div");
-  panel.id = DN_PANEL_ID;
-  panel.className = "dn-panel";
+  const panel = document.createElement("div"); panel.id = DN_PANEL_ID; panel.className = "dn-panel";
   panel.innerHTML = `<div class="dn-panel-head"><strong>DroppedNeedle</strong><button class="dn-close" aria-label="Close">×</button></div><div class="dn-video-title"></div><div class="dn-status">Finding song…</div><div class="dn-results"></div>`;
-  panel.querySelector(".dn-video-title").textContent = video.title;
-  panel.querySelector(".dn-close").addEventListener("click", closePanel);
-  document.body.append(panel);
-  positionPanel(panel, button);
-  identify(panel, video);
+  panel.querySelector(".dn-video-title").textContent = video.title; panel.querySelector(".dn-close").addEventListener("click", closePanel);
+  document.body.append(panel); positionPanel(panel, button); identify(panel, video);
 }
 
 async function identify(panel, video) {
-  const status = panel.querySelector(".dn-status");
-  const results = panel.querySelector(".dn-results");
+  const status = panel.querySelector(".dn-status"), results = panel.querySelector(".dn-results");
   try {
     const data = await dnFetch("/api/v1/plugins/ext/youtube-link/identify", { method: "POST", body: JSON.stringify(video) });
     const matches = data.matches || [];
@@ -64,8 +50,7 @@ async function identify(panel, video) {
 }
 
 function renderMatch(panel, match, index) {
-  const item = document.createElement("div");
-  item.className = `dn-result${match.recommended ? " dn-recommended" : ""}`;
+  const item = document.createElement("div"); item.className = `dn-result${match.recommended ? " dn-recommended" : ""}`;
   const heading = document.createElement("div"); heading.className = "dn-result-heading";
   const title = document.createElement("strong"); title.textContent = `${match.artist || "Unknown artist"} — ${match.title}`; heading.append(title);
   if (match.recommended) { const badge = document.createElement("span"); badge.className = "dn-badge"; badge.textContent = "Best match"; heading.append(badge); }
@@ -90,8 +75,7 @@ function injectButton() {
   const actions = document.querySelector("#top-level-buttons-computed") || document.querySelector("ytd-menu-renderer #top-level-buttons-computed"); if (!actions) return;
   const root = document.createElement("div"); root.id = DN_ID;
   const button = document.createElement("button"); button.className = "dn-add-button"; button.innerHTML = `<span class="dn-note">♪</span><span>Add to DroppedNeedle</span>`;
-  button.addEventListener("click", () => document.getElementById(DN_PANEL_ID) ? closePanel() : showPanel(getVideoMetadata()));
-  root.append(button); actions.append(root);
+  button.addEventListener("click", () => document.getElementById(DN_PANEL_ID) ? closePanel() : showPanel(getVideoMetadata())); root.append(button); actions.append(root);
 }
 
 function refreshForNavigation() {
@@ -103,7 +87,6 @@ function refreshForNavigation() {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => { if (message?.type === "DROPPEDNEEDLE_GET_VIDEO") sendResponse({ ok: true, video: getVideoMetadata() }); });
 document.addEventListener("yt-navigate-finish", () => setTimeout(refreshForNavigation, 300));
-window.addEventListener("resize", () => { const panel = document.getElementById(DN_PANEL_ID); const button = document.querySelector(`#${DN_ID} .dn-add-button`); if (panel && button) positionPanel(panel, button); });
-window.addEventListener("scroll", () => { const panel = document.getElementById(DN_PANEL_ID); const button = document.querySelector(`#${DN_ID} .dn-add-button`); if (panel && button) positionPanel(panel, button); }, true);
-const observer = new MutationObserver(refreshForNavigation); observer.observe(document.documentElement, { childList: true, subtree: true });
-refreshForNavigation();
+window.addEventListener("resize", () => { const panel = document.getElementById(DN_PANEL_ID), button = document.querySelector(`#${DN_ID} .dn-add-button`); if (panel && button) positionPanel(panel, button); });
+window.addEventListener("scroll", () => { const panel = document.getElementById(DN_PANEL_ID), button = document.querySelector(`#${DN_ID} .dn-add-button`); if (panel && button) positionPanel(panel, button); }, true);
+const observer = new MutationObserver(refreshForNavigation); observer.observe(document.documentElement, { childList: true, subtree: true }); refreshForNavigation();
