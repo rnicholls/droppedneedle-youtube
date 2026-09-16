@@ -1,110 +1,36 @@
 #droppedneedle-youtube-action {
-  position: relative;
   display: inline-flex;
   align-items: center;
   margin-left: 8px;
   font-family: Roboto, Arial, sans-serif;
 }
-
 #droppedneedle-youtube-action .dn-add-button {
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 18px;
-  background: #272727;
-  color: #f1f1f1;
-  font: 500 14px/36px Roboto, Arial, sans-serif;
-  white-space: nowrap;
-  cursor: pointer;
+  height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 14px;
+  border: 0; border-radius: 18px; background: #272727; color: #f1f1f1;
+  font: 500 14px/36px Roboto, Arial, sans-serif; white-space: nowrap; cursor: pointer;
 }
-
 #droppedneedle-youtube-action .dn-add-button:hover,
 #droppedneedle-youtube-action .dn-add-button.dn-open { background: #3f3f3f; }
 #droppedneedle-youtube-action .dn-note { font-size: 18px; line-height: 1; }
 
-#droppedneedle-youtube-action .dn-panel {
-  position: absolute;
-  z-index: 2147483000;
-  top: 44px;
-  right: 0;
-  width: 390px;
-  max-height: 520px;
-  overflow: auto;
-  padding: 16px;
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 14px;
-  background: #181818;
-  color: #f1f1f1;
-  box-shadow: 0 12px 36px rgba(0,0,0,.45);
-  font: 14px/1.4 Roboto, Arial, sans-serif;
+#droppedneedle-youtube-panel.dn-panel {
+  position: fixed; z-index: 2147483647; max-height: min(520px, calc(100vh - 24px)); overflow: auto;
+  box-sizing: border-box; padding: 16px; border: 1px solid rgba(255,255,255,.16);
+  border-radius: 14px; background: #181818; color: #f1f1f1;
+  box-shadow: 0 12px 36px rgba(0,0,0,.55); font: 14px/1.4 Roboto, Arial, sans-serif;
+  color-scheme: dark;
 }
-
-#droppedneedle-youtube-action .dn-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 16px;
-}
-
-#droppedneedle-youtube-action .dn-close {
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #aaa;
-  font-size: 24px;
-  line-height: 26px;
-  cursor: pointer;
-}
-#droppedneedle-youtube-action .dn-close:hover { background: #303030; color: white; }
-
-#droppedneedle-youtube-action .dn-video-title {
-  overflow: hidden;
-  margin-bottom: 10px;
-  color: #aaa;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#droppedneedle-youtube-action .dn-status { margin: 8px 0 12px; color: #aaa; }
-
-#droppedneedle-youtube-action .dn-result {
-  padding: 12px;
-  margin-top: 8px;
-  border: 1px solid #383838;
-  border-radius: 10px;
-  background: #212121;
-}
-#droppedneedle-youtube-action .dn-result.dn-recommended { border-color: #777; }
-#droppedneedle-youtube-action .dn-result-heading { display: flex; align-items: flex-start; gap: 8px; }
-#droppedneedle-youtube-action .dn-result-heading strong { flex: 1; }
-#droppedneedle-youtube-action .dn-badge {
-  flex: none;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: #f1f1f1;
-  color: #181818;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-#droppedneedle-youtube-action .dn-meta { margin: 5px 0 10px; color: #aaa; font-size: 12px; }
-#droppedneedle-youtube-action .dn-request {
-  width: 100%;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 16px;
-  background: #f1f1f1;
-  color: #0f0f0f;
-  font-weight: 600;
-  cursor: pointer;
-}
-#droppedneedle-youtube-action .dn-request:hover { background: #d9d9d9; }
-#droppedneedle-youtube-action .dn-request:disabled { opacity: .65; cursor: default; }
-
-html[dark] #droppedneedle-youtube-action .dn-panel { color-scheme: dark; }
+#droppedneedle-youtube-panel .dn-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 16px; }
+#droppedneedle-youtube-panel .dn-close { width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: #aaa; font-size: 24px; line-height: 26px; cursor: pointer; }
+#droppedneedle-youtube-panel .dn-close:hover { background: #303030; color: white; }
+#droppedneedle-youtube-panel .dn-video-title { overflow: hidden; margin-bottom: 10px; color: #aaa; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+#droppedneedle-youtube-panel .dn-status { margin: 8px 0 12px; color: #aaa; }
+#droppedneedle-youtube-panel .dn-result { padding: 12px; margin-top: 8px; border: 1px solid #383838; border-radius: 10px; background: #212121; }
+#droppedneedle-youtube-panel .dn-result.dn-recommended { border-color: #777; }
+#droppedneedle-youtube-panel .dn-result-heading { display: flex; align-items: flex-start; gap: 8px; }
+#droppedneedle-youtube-panel .dn-result-heading strong { flex: 1; }
+#droppedneedle-youtube-panel .dn-badge { flex: none; padding: 2px 6px; border-radius: 5px; background: #f1f1f1; color: #181818; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+#droppedneedle-youtube-panel .dn-meta { margin: 5px 0 10px; color: #aaa; font-size: 12px; }
+#droppedneedle-youtube-panel .dn-request { width: 100%; padding: 8px 12px; border: 0; border-radius: 16px; background: #f1f1f1; color: #0f0f0f; font-weight: 600; cursor: pointer; }
+#droppedneedle-youtube-panel .dn-request:hover { background: #d9d9d9; }
+#droppedneedle-youtube-panel .dn-request:disabled { opacity: .65; cursor: default; }
