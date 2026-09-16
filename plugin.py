@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 
 from infrastructure.plugins.protocols import PluginRouteResponse
 
 _MB_RECORDING_SEARCH = "https://musicbrainz.org/ws/2/recording/"
+_MB_HEADERS = {
+    "User-Agent": "DroppedNeedle-YouTube/0.1.1 (https://github.com/rnicholls/droppedneedle-youtube)",
+    "Accept": "application/json",
+}
 _NOISE = re.compile(
     r"\s*[\[(](?:official(?:\s+music)?\s+video|official\s+audio|audio|lyrics?|lyric\s+video|visuali[sz]er|hd|4k)[^\])]*[\])]\s*",
     re.IGNORECASE,
@@ -33,7 +38,24 @@ class YouTubeLinkPlugin:
             return PluginRouteResponse(status=400, body={"error": "title_required"})
 
         artist_hint, title_hint = self._parse_youtube_title(title, channel)
-        matches = await self._musicbrainz_search(artist_hint, title_hint)
+        try:
+            matches = await self._musicbrainz_search(artist_hint, title_hint)
+        except Exception as exc:  # keep plugin failures user-visible instead of host-level 502
+            self.ctx.logger.warning("MusicBrainz identify failed: %s", exc)
+            return PluginRouteResponse(
+                status=200,
+                body={
+                    "input": {
+                        "title": title,
+                        "channel": channel,
+                        "artist_hint": artist_hint,
+                        "title_hint": title_hint,
+                    },
+                    "matches": [],
+                    "warning": "MusicBrainz is temporarily unavailable. Try again in a moment.",
+                },
+            )
+
         return PluginRouteResponse(
             status=200,
             body={
@@ -65,10 +87,20 @@ class YouTubeLinkPlugin:
         if artist:
             query_parts.append(f'artist:"{self._lucene(artist)}"')
 
-        response = await self.ctx.http.get(
-            _MB_RECORDING_SEARCH,
-            params={"query": " AND ".join(query_parts), "fmt": "json", "limit": 8},
-        )
+        params = {"query": " AND ".join(query_parts), "fmt": "json", "limit": 8}
+        response = None
+        for attempt in range(2):
+            response = await self.ctx.http.get(
+                _MB_RECORDING_SEARCH,
+                params=params,
+                headers=_MB_HEADERS,
+            )
+            if response.status_code != 503:
+                break
+            if attempt == 0:
+                await asyncio.sleep(0.8)
+
+        assert response is not None
         response.raise_for_status()
         payload = response.json()
 
