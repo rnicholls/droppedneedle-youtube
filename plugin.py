@@ -67,15 +67,23 @@ class YouTubeLinkPlugin:
         return {"title": title, "channel": channel, "artist_hint": artist, "title_hint": track}
 
     @staticmethod
-    def _parse_youtube_title(title: str, channel: str) -> tuple[str, str]:
-        cleaned = _NOISE.sub(" ", title)
-        cleaned = _TRAILING_NOISE.sub("", cleaned).strip(" -–—|\t")
-        cleaned = re.sub(r"\s+", " ", cleaned)
+    def _clean_title_noise(value: str) -> str:
+        cleaned = _NOISE.sub(" ", value)
+        cleaned = _TRAILING_NOISE.sub("", cleaned)
+        return re.sub(r"\s+", " ", cleaned).strip(" -–—|\t")
+
+    @classmethod
+    def _parse_youtube_title(cls, title: str, channel: str) -> tuple[str, str]:
+        # Split the original title first, then clean artist/track independently.
+        # This prevents bracketed labels such as "Kid Ink - Trim [Audio]" from
+        # surviving when YouTube uses slightly unusual whitespace/Unicode.
+        normalized = re.sub(r"\s+", " ", title).strip()
         for separator in (" - ", " – ", " — ", " | "):
-            if separator in cleaned:
-                artist, track = cleaned.split(separator, 1)
-                track = _TRAILING_NOISE.sub("", track).strip(" -–—|\t")
-                return artist.strip(), track.strip()
+            if separator in normalized:
+                artist, track = normalized.split(separator, 1)
+                return cls._clean_title_noise(artist), cls._clean_title_noise(track)
+
+        cleaned = cls._clean_title_noise(normalized)
         artist = re.sub(r"(?:VEVO|Official|Music)$", "", channel, flags=re.IGNORECASE).strip()
         return artist, cleaned
 
